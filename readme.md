@@ -1,8 +1,9 @@
-# 🎖️ V-Tracker Pro: Sergente Hartman Edition
+# 🎖️ Gym-Tracker Pro: Sergente Hartman Edition
 
 **"Sveglia larva! Se non tieni traccia dei tuoi progressi, stai solo perdendo tempo a farti i muscoli di gelatina!"**
 
-V-Tracker Pro è un'applicazione web leggera, brutale ed efficiente per monitorare i tuoi allenamenti in palestra. Niente fronzoli, niente pubblicità, solo tu, il ferro e il cronometro.
+Gym-Tracker Pro è un'applicazione web leggera, brutale ed efficiente per monitorare i tuoi allenamenti in palestra. 
+Niente fronzoli, niente pubblicità, solo tu, il ferro e il cronometro.
 
 ---
 
