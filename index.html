@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gym-Tracker Pro |  Hartman Edition</title>
+    <style>
+        :root { --primary: #00ff88; --bg: #121212; --card: #252525; --danger: #ff4444; --accent: #0077ff; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; padding-bottom: 80px; }
+        
+        .timer-box { position: sticky; top: 0; background: #1e1e1e; padding: 15px; text-align: center; border-bottom: 3px solid var(--primary); z-index: 100; cursor: pointer; transition: background 0.2s; user-select: none; }
+        .timer-box:active { background: #333; }
+        .timer-display { font-size: 2.5rem; font-weight: bold; color: var(--primary); font-variant-numeric: tabular-nums; }
+        
+        .header-controls { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: #1a1a1a; }
+        button { background: var(--primary); color: black; border: none; padding: 8px 12px; border-radius: 5px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        button.danger { background: var(--danger); color: white; }
+        button.outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        button.icon { padding: 5px 10px; background: #444; color: white; margin-left: 5px; }
+        
+        .tabs { display: flex; overflow-x: auto; gap: 10px; padding: 15px; scrollbar-width: none; background: #1e1e1e; }
+        .tab { background: #333; padding: 10px 20px; border-radius: 20px; white-space: nowrap; cursor: pointer; border: 1px solid transparent; }
+        .tab.active { background: var(--primary); color: black; font-weight: bold; }
+        
+        .container { max-width: 600px; margin: auto; padding: 15px; }
+        h2 { color: var(--primary); font-size: 1.1rem; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        
+        /* Disabilito la selezione del testo per evitare fastidi durante il Long Press */
+        .card { background: var(--card); margin-bottom: 12px; padding: 15px; border-radius: 10px; border-left: 6px solid var(--primary); position: relative; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: pan-y; }
+        .card:active { background: #2a2a2a; }
+        .card.done { border-left-color: #555; opacity: 0.6; }
+        .badge { position: absolute; top: 15px; right: 15px; background: var(--primary); color: black; padding: 3px 8px; border-radius: 5px; font-weight: bold; font-size: 0.8rem; }
+        
+        .info-row { margin: 5px 0; color: #aaa; font-size: 0.9rem; }
+        .highlight { color: var(--primary); font-weight: bold; }
+        small { color: #ffcc00; display: block; margin-top: 5px; }
+        
+        .edit-form { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px dashed #555; }
+        input, textarea { background: #333; border: 1px solid #555; color: white; padding: 8px; border-radius: 4px; width: 100%; margin-bottom: 8px; }
+        textarea { font-family: monospace; }
+        .flex-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+        .import-box { background: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid var(--primary); margin-top: 30px; }
+      /* MODAL DI BENVENUTO HARTMAN */
+.overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.95); display: flex; align-items: center;
+    justify-content: center; z-index: 9999; padding: 20px; text-align: center;
+}
+.modal-content {
+    border: 2px solid var(--danger); padding: 30px; background: #111;
+    box-shadow: 0 0 20px var(--danger); max-width: 400px;
+}
+.modal-content h1 { color: var(--danger); margin-top: 0; }
+.modal-content p { font-size: 1.1rem; line-height: 1.5; margin-bottom: 25px; }
+.btn-combat {
+    background: var(--danger); color: white; border: none;
+    padding: 15px 30px; font-size: 1.2rem; cursor: pointer;
+    font-family: inherit; font-weight: bold; width: 100%;
+}
+.btn-combat:active { transform: scale(0.95); background: #b00; }
+
+
+    </style>
+</head>
+<body>
+
+<div id="root"></div>
+<script src="https://code.responsivevoice.org/responsivevoice.js?key=xnCJxKtB"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js"></script>
+<script type="module">
+import React, { useState, useEffect, useRef } from 'https://esm.sh/react@18';
+import { createRoot } from 'https://esm.sh/react-dom@18/client';
+import htm from 'https://esm.sh/htm';
+
+const html = htm.bind(React.createElement);
+  
+  const UPSTASH_URL = "https://helped-teal-58323.upstash.io";
+const UPSTASH_TOKEN = "AePTAAIncDJjOGRmNmRhNTk5MDg0YTE4ODEwMzBlZWRmNDQ1ZDE3OXAyNTgzMjM";
+
+const HARTMAN_QUOTES = [
+  "MUOVITI LARVA! Tua madre spinge più di te mentre fa la spesa!",
+    "MI FAI SCHIFO! Quel peso sembra una piuma e tu tremi come una vergine!",
+    "NON HAI IL PERMESSO DI RESPIRARE! Sposta quel fottuto pezzo di ferro!",
+    "VUOI CHE TI CHIAMI UN'AMBULANZA O CONTINUI A FARE LA BALLERINA?",
+    "SEI UN INSULTO ALLA RAZZA UMANA! Crepa sotto quel bilanciere!",
+    "SUDORE? QUELLO È IL TUO AMMASSO DI LARDO CHE PIANGE PER LA TUA INUTILITÀ!",
+    "SE TI FERMI TI PRENDO A CALCI NELLE PALLE FINO A DOMANI MATTINA!",
+    "MI SEMBRA DI VEDERE MIA NONNA IN CARRIOLA! PIÙ VELOCE!",
+    "NON TI HO DATO IL PERMESSO DI ESSERE STANCO, PEZZO DI MERDA!",
+    "QUELLA NON ERA UNA RIPETIZIONE, ERA UN ABORTO! RIFALLA!",
+    "SPINGI O TI FACCIO PULIRE IL PAVIMENTO DELLA PALESTRA CON LA TUA FACCIA!",
+    "COSA CAZZO GUARDI? CREDI CHE IL PESO SI ALZI PERCHÈ SEI BELLO?",
+    "Smettila di piangere e spingi quella merda!",
+    "Mia nonna solleva di più, ed è morta da vent'anni!",
+    "Non sei qui per pettinare le bambole! Muoviti!",
+    "Sembri un fottuto budino tremolante! Contrai quei muscoli!",
+    "Solo i tori e le checche vengono dal Texas, e tu non hai le corna!",
+    "Vuoi la mamma? Mettiti a spingere o ti faccio sputare l'anima!",
+    "Sei la forma di vita più bassa sulla faccia della terra!",
+    "Riposati? Il riposo è per i morti! Ancora una rep!",
+    "Che cos'è questo schifo? Un allenamento per neonati?",
+    "Il sudore è il lardo che piange! Fallo piangere!",
+    "Non hai il permesso di stancarti! Io non ti ho dato il permesso!",
+    "Schiaccia quel peso come se fosse la testa del tuo peggior nemico!",
+    "Sei così debole che mi fai venire voglia di piangere!",
+    "Ancora una ripetizione o ti faccio pulire le latrine con la lingua!",
+    "Fai schifo! Rimettiti sotto quel bilanciere, verme!",
+    "Sei un ammasso di lardo flaccido, muovi quel culo!",
+    "Il dolore è la debolezza che abbandona il corpo. Smettila di frignare!",
+    "Non fermarti! Se ti fermi ti prendo a calci nel culo fino a domani!",
+    "Credi di aver finito? Hai appena iniziato, ballerina!",
+    "Sveglia! Questo non è un fottuto centro benessere!",
+    "Tira su quel peso o te lo faccio ingoiare!",
+    "Sei un insulto all'evoluzione umana! Spingi!",
+    "Voglio vedere sangue, sudore e lacrime! Muoviti!",
+    "Le tue scuse non sollevano i pesi! Zitto e lavora!",
+    "Pesi come una piuma e sei debole come un grissino bagnato!",
+    "Quella era una ripetizione? Sembrava uno spasmo muscolare!",
+  "Mettiti sotto quella sbarra! Voglio vederti soffrire fino a diventare blu!",
+"Cosa sono quei tremolii? Sembri un vibratore difettoso! Spingi!",
+"Posa quella merda e respira finché te lo permetto.  prima che ti prenda a calci!",
+"Ti vedo troppo rilassato, verme. Ho aggiunto del peso così magari oggi muori davvero!",
+"Il timer scorre, ballerina! Vuoi che ti porti un tè e dei pasticcini mentre aspetti?",
+"Sei così brutto che potresti essere un capolavoro d'arte moderna di fango e fallimento!",
+"Non piangere per il dolore, piangi perché sei una delusione per l'intera razza umana!"
+];
+
+const DEFAULT_CONFIG = [
+    {
+        id: "day_special",
+        title: "GIORNO SPECIALE (Oggi)",
+        exercises: [
+            { id: "ex_s1", name: "Panca Piana Bilanciere", desc: "Controllo eccentrica, piedi saldi", setsReps: "4 x 6", weight: "100kg" },
+            { id: "ex_s2", name: "Trazioni (o Lat Machine)", desc: "Focus ampiezza e controllo", setsReps: "4 x 8", weight: "BW" },
+            { id: "ex_s3", name: "Military Press Seduto", desc: "Schienale a 80 gradi", setsReps: "3 x 8", weight: "55kg" },
+            { id: "ex_s4", name: "Rematore Manubrio", desc: "Appoggio panca, busto parallelo", setsReps: "3 x 10", weight: "36kg" },
+            { id: "ex_s5", name: "Face Pull (Cavi)", desc: "Posturale, focus deltoide post", setsReps: "4 x 15", weight: "25kg" },
+            { id: "ex_s6", name: "Panca Stretta", desc: "Tricipiti, gomiti ai fianchi", setsReps: "3 x 10", weight: "70kg" },
+            { id: "ex_s7", name: "Curl Bilanciere EZ", desc: "No oscillazioni col busto", setsReps: "3 x 10", weight: "35kg" },
+            { id: "ex_s8", name: "Alzate a 90 gradi", desc: "Focus muscoli piccoli scapolari", setsReps: "3 x 15", weight: "10kg" }
+        ]
+    },
+    {
+        id: "day_1",
+        title: "GIORNO 1: Spinta (Focus Petto)",
+        exercises: [
+            { id: "ex_11", name: "Panca Inclinata Manubri", desc: "Focus parte alta petto", setsReps: "3 x 8", weight: "34+34kg" },
+            { id: "ex_12", name: "Chest Press Machine", desc: "Contrazione di picco 2 sec", setsReps: "3 x 12", weight: "80kg" },
+            { id: "ex_13", name: "Alzate Laterali Cavi", desc: "Tensione continua per spalle", setsReps: "4 x 12", weight: "15kg" },
+            { id: "ex_14", name: "Pushdown Corda", desc: "Isolamento tricipiti", setsReps: "4 x 12", weight: "30kg" }
+        ]
+    },
+    {
+        id: "day_2",
+        title: "GIORNO 2: Trazione (Focus Dorso)",
+        exercises: [
+            { id: "ex_21", name: "Lat Machine Presa Inversa", desc: "Focus bicipiti e gran dorsale", setsReps: "3 x 10", weight: "75kg" },
+            { id: "ex_22", name: "Pulley Basso", desc: "Petto fuori, scapole chiuse", setsReps: "3 x 10", weight: "65kg" },
+            { id: "ex_23", name: "Hammer Curl Manubri", desc: "Spessore braccia", setsReps: "3 x 10", weight: "18+18kg" },
+            { id: "ex_24", name: "Scrollate con manubri", desc: "Contrazione 2 sec in alto", setsReps: "3 x 12", weight: "32+32kg" }
+        ]
+    },
+    {
+        id: "day_3",
+        title: "GIORNO 3: Gambe (Salva-Lombare)",
+        exercises: [
+            { id: "ex_31", name: "Pressa 45 gradi", desc: "Piedi alti per meno stress lombare", setsReps: "4 x 10", weight: "160kg" },
+            { id: "ex_32", name: "Leg Extension", desc: "Isolamento quadricipiti", setsReps: "3 x 12", weight: "50kg" },
+            { id: "ex_33", name: "Leg Curl Seduto", desc: "Protegge schiena rispetto a sdraiato", setsReps: "4 x 12", weight: "45kg" },
+            { id: "ex_34", name: "Calf alla Pressa", desc: "Stretch profondo polpacci", setsReps: "4 x 15", weight: "100kg" }
+        ]
+    },
+    {
+        id: "day_4",
+        title: "GIORNO 4: Upper Body (Weak Points)",
+        exercises: [
+            { id: "ex_41", name: "Dips alla macchina", desc: "Focus tricipiti/petto basso", setsReps: "3 x 10", weight: "80kg" },
+            { id: "ex_42", name: "Pull-over al cavo alto", desc: "Allungamento dorsale", setsReps: "3 x 12", weight: "25kg" },
+            { id: "ex_43", name: "Alzate Laterali Manubri", desc: "Volume per deltoide laterale", setsReps: "4 x 15", weight: "12+12kg" },
+            { id: "ex_44", name: "Spider Curl su Panca", desc: "Isolamento bicipiti, no schiena", setsReps: "3 x 12", weight: "12+12kg" }
+        ]
+    },
+  {
+        id: "workout_2h_pro",
+        title: "DOMINATION (2 ORE)",
+        exercises: [
+            // --- BLOCCO FORZA (Pulsazioni lente e pesanti) ---
+            { id: "h2_1", name: "Panca Piana Bilanciere", desc: "Riscaldamento piramidale + 4 serie pesanti", setsReps: "4 x 6", weight: "100kg" },
+            { id: "h2_2", name: "Trazioni Zavorrate (o Lat)", desc: "Focus esplosività nella salita", setsReps: "4 x 8", weight: "+15kg/BW" },
+            { id: "h2_3", name: "Military Press Bilanciere", desc: "Core solido, spinta verticale pura", setsReps: "4 x 8", weight: "60kg" },
+            
+            // --- BLOCCO IPERTROFIA (Volume e densità) ---
+            { id: "h2_4", name: "Panca Inclinata Manubri", desc: "30° inclinazione, stretch massimo", setsReps: "3 x 10", weight: "36+36kg" },
+            { id: "h2_5", name: "Rematore Bilanciere", desc: "Busto a 45°, tirata all'ombelico", setsReps: "3 x 10", weight: "80kg" },
+            { id: "h2_6", name: "Dips Parallele", desc: "Focus petto, scendi bene", setsReps: "3 x 12", weight: "BW" },
+            
+            // --- BLOCCO ISOLAMENTO E DETTAGLIO (Focus estetico) ---
+            { id: "h2_7", name: "Alzate Laterali Cavi", desc: "Tensione continua, no pausa", setsReps: "4 x 15", weight: "15kg" },
+            { id: "h2_8", name: "Face Pull", desc: "Focus deltoide posteriore e postura", setsReps: "4 x 15", weight: "25kg" },
+            { id: "h2_9", name: "Curl Bilanciere EZ + Pushdown", desc: "Superset braccia (no rest tra i due)", setsReps: "4 x 12", weight: "35kg/30kg" },
+            
+            // --- FINISHER (Pompaggio finale) ---
+            { id: "h2_10", name: "Croci ai Cavi (Alto)", desc: "Contrazione di 2 sec ogni rep", setsReps: "3 x 20", weight: "15kg" },
+            { id: "h2_11", name: "Plank Addominali", desc: "Resisti fino al bip del minuto", setsReps: "3 x 60sec", weight: "Corpo Libero" }
+        ]
+    }
+];
+
+const generateId = () => Math.random().toString(36).substr(2, 9);
+
+function App() {
+    const [config, setConfig] = useState(() => JSON.parse(localStorage.getItem('react_workout_config')) || DEFAULT_CONFIG);
+    const [dates, setDates] = useState(() => JSON.parse(localStorage.getItem('react_workout_dates')) || {});
+    const [activeDayIdx, setActiveDayIdx] = useState(0);
+    const [sessionState, setSessionState] = useState({});
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [cloudStatus, setCloudStatus] = useState("Locale");
+    const [audioEnabled, setAudioEnabled] = useState(true);
+    
+    const [importJson, setImportJson] = useState("");
+    const [seconds, setSeconds] = useState(0);
+    
+    const lastClickRef = useRef(Date.now());
+    const audioCtx = useRef(null);
+    const wakeLockRef = useRef(null);
+    
+    // Gestione Long Press
+    const longPressTimerRef = useRef(null);
+    const isLongPressRef = useRef(false);
+  
+  // Aggiungi questo stato all'inizio di App()
+const [showOverlay, setShowOverlay] = useState(true);
+
+const handleCombatStart = () => {
+    // 1. Attiva NoSleep (Wake Lock)
+    const noSleep = new window.NoSleep();
+    noSleep.enable();
+
+    // 2. Sblocca AudioContext
+    if (!audioCtx.current) {
+        audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    audioCtx.current.resume();
+
+    // 3. Test Audio Silenzioso per sbloccare ResponsiveVoice e API di sistema
+    try {
+        const osc = audioCtx.current.createOscillator();
+        const gain = audioCtx.current.createGain();
+        gain.gain.value = 0;
+        osc.connect(gain);
+        gain.connect(audioCtx.current.destination);
+        osc.start(0);
+        osc.stop(0.01);
+        
+        if (window.responsiveVoice) {
+            window.responsiveVoice.speak("Sissignore!", "Italian Male", {pitch: 0.1, rate: 1, volume: 1});
+        }
+    } catch (e) { console.warn(e); }
+
+    // 4. Chiudi il modal e inizia l'inferno
+    setShowOverlay(false);
+};
+  
+    // Salvataggio remoto
+    const isFirstRender = useRef(true);
+    const params = new URLSearchParams(window.location.search);
+    const username = params.get('user') || 'anonimo';
+  
+    // 1. CARICAMENTO DATI DAL CLOUD (All'avvio)
+    useEffect(() => {
+        if (username !== 'anonimo') {
+            setCloudStatus("Sincronizzazione Redis...");
+            fetch(UPSTASH_URL, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${UPSTASH_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                // Comandiamo a Redis di darci il valore della chiave associata all'utente
+                body: JSON.stringify(["GET", `gtracker_${username}`])
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.result) {
+                    setConfig(JSON.parse(data.result));
+                    setCloudStatus(`Redis: ${username.toUpperCase()} (Allineato)`);
+                } else {
+                    setCloudStatus(`Redis: ${username.toUpperCase()} (Nuova Recluta)`);
+                }
+            })
+            .catch(err => {
+                console.error("Redis Load Err:", err);
+                setCloudStatus("Errore Redis (Uso Locale)");
+            });
+        }
+    }, [username]);
+
+    // 2. SALVATAGGIO DATI SUL CLOUD (Ad ogni modifica)
+    useEffect(() => {
+        // Salvataggio in trincea (Locale) SEMPRE ATTIVO
+        localStorage.setItem(`workout_${username}`, JSON.stringify(config));
+
+        // Evitiamo di sovrascrivere il Cloud col vuoto cosmico al primo caricamento
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+
+        if (username !== 'anonimo' && config.length > 0) {
+            setCloudStatus("Salvataggio...");
+            fetch(UPSTASH_URL, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${UPSTASH_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                // Comandiamo a Redis di salvare la stringa JSON associata all'utente
+                body: JSON.stringify(["SET", `gtracker_${username}`, JSON.stringify(config)])
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.result === "OK") setCloudStatus(`Redis: ${username.toUpperCase()} (Salvato)`);
+            })
+            .catch(err => console.error("Redis Save Err:", err));
+        }
+    }, [config, username]);
+
+    // Salvataggio locale
+    useEffect(() => { localStorage.setItem('react_workout_config', JSON.stringify(config)); }, [config]);
+    useEffect(() => { localStorage.setItem('react_workout_dates', JSON.stringify(dates)); }, [dates]);
+
+    // WAKE LOCK API (Impedisce lo standby dello schermo)
+    useEffect(() => {
+        const requestWakeLock = async () => {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLockRef.current = await navigator.wakeLock.request('screen');
+                } catch (err) { console.warn("Wake Lock negato o non supportato", err); }
+            }
+        };
+        requestWakeLock();
+        
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') requestWakeLock();
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, []);
+
+    // WEB WORKER PER IL TIMER (Funziona anche in background/tab inattiva)
+    useEffect(() => {
+        const workerCode = `
+            let interval;
+            self.onmessage = function(e) {
+                if (e.data === 'start') {
+                    interval = setInterval(() => self.postMessage('tick'), 1000);
+                } else if (e.data === 'stop') {
+                    clearInterval(interval);
+                }
+            };
+        `;
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(blob);
+        const worker = new Worker(workerUrl);
+        
+        worker.onmessage = () => {
+            setSeconds(Math.floor((Date.now() - lastClickRef.current) / 1000));
+        };
+        worker.postMessage('start');
+        
+        return () => {
+            worker.postMessage('stop');
+            URL.revokeObjectURL(workerUrl);
+        };
+    }, []);
+// Init Audio
+    const initAudio = () => {
+        if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.current.state === 'suspended') audioCtx.current.resume();
+        return audioCtx.current;
+    };
+    // Funzione Generazione Bip (Oscillatore Web Audio API)
+    const playBeep = (freq, duration, vol = 0.1) => {
+        if (!audioEnabled) return;
+        try {
+            const ctx = initAudio();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            gain.gain.setValueAtTime(vol, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + duration/1000);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(ctx.currentTime + duration/1000);
+        } catch (e) { console.error("Beep err:", e); }
+    };
+  
+  // ESCAMOTAGE: VERO GENERATORE DI PARLATO A 8-BIT TRAMITE AUDIOCONTEXT
+const playRobotSpeech = (text) => {
+    if (!audioEnabled) return;
+    try {
+      responsiveVoice.speak(text, "Italian Male", {pitch: 0.3, rate: 1.1});
+    }catch (e) { 
+        console.error("Robot Speech err:", e); 
+    }
+};
+
+    // Controllo notifiche ogni secondo
+    useEffect(() => {
+        if (seconds > 0 && seconds % 30 === 0 && audioEnabled) {
+            const isFullMinute = seconds % 60 === 0;
+            const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+
+            if (voices.length > 0) {
+                window.speechSynthesis.cancel();
+                const msg = new SpeechSynthesisUtterance(isFullMinute ? `${seconds/60} minuti` : `${Math.floor(seconds/60)} minuti, 30 secondi`);
+                msg.lang = 'it-IT';
+                window.speechSynthesis.speak(msg);
+            } else {
+              responsiveVoice.speak(isFullMinute ? `${seconds/60} minuti` : `${Math.floor(seconds/60)} minuti, 30 secondi`, "Italian Female", {pitch: 0.7, rate: 1.2});
+                
+            }
+          if (isFullMinute) playBeep(440, 1200, 0.6); // Bip lungo
+                else {
+                    playBeep(587, 150, 0.2); // Doppio bip
+                    setTimeout(() => playBeep(587, 150, 0.6), 250);
+                }
+        }
+    }, [seconds, audioEnabled]);
+
+    const handleTimerReset = () => {
+        lastClickRef.current = Date.now();
+        setSeconds(0);
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+    };
+
+    const getSets = (setsReps) => parseInt((setsReps||'3').split('x')[0].trim()) || 3;
+
+    // Voce di Hartman
+    // HARTMAN MASTER FUNCTION
+    const speakHartman = () => {
+        if (!audioEnabled) return;
+        const quote = HARTMAN_QUOTES[Math.floor(Math.random() * HARTMAN_QUOTES.length)];
+        
+        const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+        if (window.speechSynthesis && voices.length > 0) {
+            window.speechSynthesis.cancel();
+            const msg = new SpeechSynthesisUtterance(quote);
+            msg.lang = 'it-IT';
+            msg.rate = 1.1;
+            msg.pitch = 0.8;
+            window.speechSynthesis.speak(msg);
+        } else {
+            // Se le API vocali di sistema falliscono, invoca il demone a 8-bit!
+            playRobotSpeech(quote);
+        }
+    };
+
+    // --- LOGICA LONG PRESS E CLICK ---
+    const handlePointerDown = (ex) => {
+        if (isEditMode) return;
+        isLongPressRef.current = false;
+        longPressTimerRef.current = setTimeout(() => {
+            isLongPressRef.current = true;
+            const query = encodeURIComponent(`${ex.name} tutorial esecuzione palestra italiano`);
+            window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
+        }, 600); // 600ms per attivare la ricerca Youtube
+    };
+  
+  // --- PROGRESSIONE AUTOMATICA ---
+    const progressWeight = (weightStr) => {
+        const num = parseFloat(weightStr.replace(/[^0-9.]/g, ''));
+        if (isNaN(num) || num === 0) return weightStr;
+        // Aumenta del 2.5% e arrotonda al 0.5 più vicino
+        const newWeight = (Math.round((num * 1.025) * 2) / 2).toFixed(1);
+        return `${newWeight}KG`;
+    };
+
+    const handlePointerUp = (ex) => {
+        if (isEditMode) return;
+        clearTimeout(longPressTimerRef.current);
+        
+        // Se NON è stato un long press, trattalo come un normale completamento di Set
+        if (!isLongPressRef.current) {
+            const currentSets = sessionState[ex.id] !== undefined ? sessionState[ex.id] : getSets(ex.setsReps);
+            
+            if (currentSets > 1) {
+              setSessionState(prev => ({ ...prev, [ex.id]: currentSets - 1 }));
+              lastClickRef.current = Date.now();
+              speakHartman();
+          } else if (currentSets === 1) {
+              // ESERCIZIO FINITO -> AUMENTA PESO PER LA PROSSIMA VOLTA
+              setSessionState(prev => ({ ...prev, [ex.id]: 0 }));
+              const newConfig = config.map(day => ({
+                  ...day,
+                  exercises: day.exercises.map(e => {
+                      if (e.id === ex.id) {
+                          const newW = progressWeight(e.weight);
+                          return { ...e, weight: newW, lastIncrease: true };
+                      }
+                      return e;
+                  })
+              }));
+              setConfig(newConfig);
+          }
+          handleTimerReset();
+          speakHartman(); // Sgrida l'utente!
+        }
+    };
+
+    const handlePointerLeave = () => {
+        // Se scrollo o esco dalla card, annullo il timer del long press
+        clearTimeout(longPressTimerRef.current);
+    };
+
+    const resetExercise = (ex) => {
+        if (isEditMode) return;
+        setSessionState(prev => ({ ...prev, [ex.id]: getSets(ex.setsReps) }));
+    };
+
+    // --- FUNZIONI CRUD ---
+    const addDay = () => {
+        setConfig([...config, { id: generateId(), title: "Nuovo Giorno", exercises: [] }]);
+        setActiveDayIdx(config.length);
+    };
+    const updateDayTitle = (dayId, newTitle) => setConfig(config.map(d => d.id === dayId ? { ...d, title: newTitle } : d));
+    const deleteDay = (dayId) => {
+        if (confirm("Eliminare l'intera scheda?")) {
+            setConfig(config.filter(d => d.id !== dayId));
+            setActiveDayIdx(Math.max(0, activeDayIdx - 1));
+        }
+    };
+    const addExercise = (dayId) => setConfig(config.map(d => d.id === dayId ? { ...d, exercises: [...d.exercises, { id: generateId(), name: "Nuovo Esercizio", desc: "Note...", setsReps: "3 x 10", weight: "0kg" }] } : d));
+    const updateExercise = (dayId, exId, field, value) => setConfig(config.map(d => d.id === dayId ? { ...d, exercises: d.exercises.map(ex => ex.id === exId ? { ...ex, [field]: value } : ex) } : d));
+    const moveExercise = (dayId, index, direction) => {
+        setConfig(config.map(d => {
+            if (d.id === dayId) {
+                const newExs = [...d.exercises];
+                const targetIdx = index + direction;
+                if (targetIdx >= 0 && targetIdx < newExs.length) [newExs[index], newExs[targetIdx]] = [newExs[targetIdx], newExs[index]];
+                return { ...d, exercises: newExs };
+            }
+            return d;
+        }));
+    };
+    const deleteExercise = (dayId, exId) => { if (confirm("Eliminare?")) setConfig(config.map(d => d.id === dayId ? { ...d, exercises: d.exercises.filter(ex => ex.id !== exId) } : d)); };
+    
+    const handleImport = () => {
+        try {
+            const parsed = JSON.parse(importJson);
+            if (!Array.isArray(parsed)) throw new Error("Il JSON deve essere un array [...]");
+            const sanitized = parsed.map(day => ({
+                id: generateId(), title: day.title || day.day || "Importato",
+                exercises: (day.exercises || []).map(ex => ({
+                    id: generateId(), name: ex.name || "Esercizio", desc: ex.desc || "", setsReps: ex.setsReps || "3 x 10", weight: ex.weight || "0kg"
+                }))
+            }));
+            setConfig([...config, ...sanitized]); setImportJson(""); alert("Importato con successo!");
+        } catch (e) { alert("Errore JSON: " + e.message); }
+    };
+
+    const activeDay = config[activeDayIdx] || null;
+    // Controlla se tutti gli esercizi del giorno sono a 0 set
+    const isDayCompleted = activeDay && activeDay.exercises.length > 0 && activeDay.exercises.every(ex => {
+        const setsLeft = sessionState[ex.id] !== undefined ? sessionState[ex.id] : parseInt(ex.setsReps);
+        return setsLeft === 0;
+    });
+
+    // Funzione per il reset del giorno e salvataggio data
+    const handleResetDay = () => {
+        // Salva la data di oggi per questo giorno
+        const oggi = new Date().toLocaleDateString('it-IT');
+        setDates(prev => ({ ...prev, [activeDay.id]: oggi }));
+
+        // Resetta i set rimuovendoli dal sessionState (torneranno al massimo)
+        const newSession = { ...sessionState };
+        activeDay.exercises.forEach(ex => {
+            delete newSession[ex.id];
+        });
+        setSessionState(newSession);
+
+        if (window.responsiveVoice) {
+            window.responsiveVoice.speak("Giornata completata! Ora sparisci dalla mia vista, larva!", "Italian Male", {pitch: 0.2, rate: 1.1, volume: 1});
+        }
+    };
+
+    return html`
+        <div>
+        ${showOverlay && html`
+            <div className="overlay">
+                <div className="modal-content">
+                <div className="hartman-pixel"><img src="data:image/jpeg;base64,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" /></div>
+<h1 style=${{marginTop: '10px'}}>RECLUTA!</h1>
+<p>Stai per entrare in una zona di dolore controllato. <br/><br/> 
+                       Il tuo schermo rimarrà acceso e io ti urlerò contro finché non sarai diventato un vero uomo.</p>
+                    <button className="btn-combat" onClick=${handleCombatStart}>
+                        SONO PRONTO A SOFFRIRE!
+                    </button>
+                </div>
+            </div>
+        `}
+            ${!isEditMode ? html`
+                <div className="timer-box" onClick=${handleTimerReset}>
+                    <div className="timer-display">${Math.floor(seconds/60).toString().padStart(2,'0')}:${(seconds%60).toString().padStart(2,'0')}</div>
+                    <div style=${{fontSize:'0.7rem', color: 'var(--primary)'}}>TAP PER RESETTARE IL RECUPERO</div>
+                </div>
+            ` : ''}
+
+            <div className="header-controls">
+                <h3>Gym-Tracker Pro</h3>
+                <div style=${{ display: 'flex', gap: '10px' }}>
+                    <button onClick=${() => setAudioEnabled(!audioEnabled)} title="Attiva/Disattiva Audio" style=${{ fontSize: '1.2rem', padding: '5px 10px', background: '#333' }}>
+                        ${audioEnabled ? '🔊' : '🔇'}
+                    </button>
+                    <button onClick=${() => speakHartman()} title="Sergente Hartman" style=${{ fontSize: '1.2rem', padding: '5px 10px', background: '#333' }}>
+                        🗣️
+                    </button>
+                    <button onClick=${() => setIsEditMode(!isEditMode)} className=${isEditMode ? '' : 'outline'}>
+                        ${isEditMode ? "💾 Salva" : "⚙️ Modifica"}
+                    </button>
+                </div>
+            </div>
+
+            <div className="tabs">
+                ${config.map((day, idx) => html`
+                    <div key=${day.id} className=${`tab ${activeDayIdx === idx ? 'active' : ''}`} onClick=${() => setActiveDayIdx(idx)}>
+                        ${isEditMode 
+                            ? html`<input value=${day.title} onChange=${(e) => updateDayTitle(day.id, e.target.value)} onClick=${e => e.stopPropagation()} style=${{ width: '120px', margin: 0, padding: '2px 5px' }} />` 
+                            : html`<div>${day.title}</div>
+                                ${dates[day.id] && html`<div style=${{fontSize: '0.6rem', color: '#888', marginTop: '3px', textTransform: 'none', fontWeight: 'normal'}}>Ultimo: ${dates[day.id]}</div>`}`
+                        }
+                    </div>
+                `)}
+                ${isEditMode && html`<button onClick=${addDay} style=${{padding: '5px 10px'}}>+ Giorno</button>`}
+            </div>
+
+            <div className="container">
+                ${!activeDay ? html`<p style=${{textAlign: 'center', marginTop: '20px'}}>Nessun allenamento. Clicca ⚙️ Modifica per iniziare.</p>` : ''}
+
+                ${!isEditMode && activeDay ? html`
+                    <div>
+                        <h2>Esercizi Da Fare <span style=${{fontSize:'0.6rem', color:'#888', textTransform:'none'}}>(Tieni premuto per Youtube)</span></h2>
+                        ${activeDay.exercises.filter(ex => (sessionState[ex.id] !== undefined ? sessionState[ex.id] : getSets(ex.setsReps)) > 0).map(ex => {
+                            const sets = sessionState[ex.id] !== undefined ? sessionState[ex.id] : getSets(ex.setsReps);
+                            return html`
+                                <div key=${ex.id} 
+                                     className="card" 
+                                     onPointerDown=${() => handlePointerDown(ex)} 
+                                     onPointerUp=${() => handlePointerUp(ex)}
+                                     onPointerLeave=${handlePointerLeave}
+                                     onPointerCancel=${handlePointerLeave}>
+                                    <div className="badge">${sets} SET</div>
+                                    <strong>${ex.name}</strong>
+                                    <div className="info-row">${ex.setsReps} @ <span className="highlight">${ex.weight}</span></div>
+                                    <small>${ex.desc}</small>
+                                </div>
+                            `;
+                        })}
+                        
+                        ${activeDay.exercises.filter(ex => sessionState[ex.id] === 0).length > 0 && html`<h2>Completati</h2>`}
+                        
+                        ${activeDay.exercises.filter(ex => sessionState[ex.id] === 0).map(ex => html`
+                            <div key=${ex.id} className="card done" onClick=${() => resetExercise(ex)}>
+                                <strong>✅ ${ex.name}</strong>
+                            </div>
+                        `)}
+                    </div>
+                ` : ''}
+
+                ${isEditMode && activeDay ? html`
+                    <div>
+                        <div style=${{display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom: '1px solid #333', paddingBottom: '10px', marginBottom: '15px'}}>
+                            <h2 style=${{border: 'none', padding: 0, margin: 0}}>Modifica Esercizi</h2>
+                            <button className="danger" onClick=${() => deleteDay(activeDay.id)}>🗑️ Elimina Giorno</button>
+                        </div>
+                        
+                        ${activeDay.exercises.map((ex, idx) => html`
+                            <div key=${ex.id} className="edit-form">
+                                <div className="flex-row" style=${{ justifyContent: 'space-between' }}>
+                                    <div>
+                                        <button className="icon" disabled=${idx === 0} onClick=${() => moveExercise(activeDay.id, idx, -1)}>↑</button>
+                                        <button className="icon" disabled=${idx === activeDay.exercises.length - 1} onClick=${() => moveExercise(activeDay.id, idx, 1)}>↓</button>
+                                    </div>
+                                    <button className="danger" onClick=${() => deleteExercise(activeDay.id, ex.id)}>X</button>
+                                </div>
+                                <input placeholder="Nome Esercizio" value=${ex.name} onChange=${e => updateExercise(activeDay.id, ex.id, 'name', e.target.value)} />
+                                <div className="flex-row">
+                                    <input placeholder="Set x Rep" value=${ex.setsReps} onChange=${e => updateExercise(activeDay.id, ex.id, 'setsReps', e.target.value)} />
+                                    <input placeholder="Peso" value=${ex.weight} onChange=${e => updateExercise(activeDay.id, ex.id, 'weight', e.target.value)} />
+                                </div>
+                                <input placeholder="Note/Descrizione" value=${ex.desc} onChange=${e => updateExercise(activeDay.id, ex.id, 'desc', e.target.value)} />
+                            </div>
+                        `)}
+                        ${!isEditMode && isDayCompleted && html`
+                    	<div style=${{marginTop: '30px', textAlign: 'center'}}>
+                        	<button className="btn-combat" onClick=${handleResetDay} style=${{width: '100%', padding: '20px', fontSize: '1.2rem'}}>
+                            	✅ ALLENAMENTO CONCLUSO: RESETTA E SALVA DATA
+                        	</button>
+                    	</div>
+                		`}
+                        <button onClick=${() => addExercise(activeDay.id)} style=${{ width: '100%', padding: '15px', marginTop: '10px' }}>+ Aggiungi Esercizio</button>
+
+                        <div className="import-box">
+                            <h3 style=${{marginTop: 0, color:'var(--primary)'}}>📥 Importa (JSON)</h3>
+                            <textarea rows="4" placeholder="Incolla JSON qui..." value=${importJson} onChange=${e => setImportJson(e.target.value)}></textarea>
+                            <button onClick=${handleImport} style=${{width: '100%'}}>Aggiungi alla Scheda</button>
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+const root = createRoot(document.getElementById('root'));
+root.render(html`<${App} />`);
+</script>
+</body>
+</html>
