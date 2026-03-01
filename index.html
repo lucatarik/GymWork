@@ -468,7 +468,8 @@ const playRobotSpeech = (text) => {
             window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
         }, 600); // 600ms per attivare la ricerca Youtube
     };
-  
+      const activeDay = config[activeDayIdx] || null;
+
   // --- PROGRESSIONE AUTOMATICA ---
     const progressWeight = (weightStr) => {
         const num = parseFloat(weightStr.replace(/[^0-9.]/g, ''));
@@ -477,7 +478,7 @@ const playRobotSpeech = (text) => {
         const newWeight = (Math.round((num * 1.025) * 2) / 2).toFixed(1);
         return `${newWeight}KG`;
     };
-
+    var isDayCompleted = false;
     const handlePointerUp = (ex) => {
         if (isEditMode) return;
         clearTimeout(longPressTimerRef.current);
@@ -503,6 +504,14 @@ const playRobotSpeech = (text) => {
                       return e;
                   })
               }));
+                isDayCompleted = activeDay && activeDay.exercises.length > 0 && activeDay.exercises.every(ex => {
+                    // Recupera i set rimanenti dallo stato, altrimenti usa il valore base della scheda
+                    const currentSets = sessionState[ex.id] !== undefined 
+                        ? Number(sessionState[ex.id]) 
+                        : Number(ex.setsReps.split('x')[0].trim()); // Prende il primo numero se scrivi "3x10"
+                    
+                    return currentSets <= 0;
+                });
               setConfig(newConfig);
           }
           handleTimerReset();
@@ -561,15 +570,6 @@ const playRobotSpeech = (text) => {
         } catch (e) { alert("Errore JSON: " + e.message); }
     };
 
-    const activeDay = config[activeDayIdx] || null;
-    // Controlla se tutti gli esercizi del giorno sono a 0 set
-    const isDayCompleted = useMemo(() => {
-        if (!activeDay || activeDay.exercises.length === 0) return false;
-        return activeDay.exercises.every(ex => {
-            const setsLeft = sessionState[ex.id] !== undefined ? sessionState[ex.id] : parseInt(ex.setsReps);
-            return setsLeft === 0;
-        });
-    }, [activeDay, sessionState]);
 
     // Funzione per il reset del giorno e salvataggio data
     const handleResetDay = () => {
